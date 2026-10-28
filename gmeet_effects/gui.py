@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+import webbrowser
 from tkinter import colorchooser, messagebox, ttk
 
 import cv2
@@ -59,11 +60,16 @@ class App:
         ttk.Combobox(run, textvariable=self.res_var, width=10, state="readonly",
                      values=["640x360", "960x540", "1280x720"]).grid(row=1, column=1, columnspan=2,
                                                                        sticky="w")
+        self.browser_var = tk.BooleanVar(value=s.browser_enabled)
+        ttk.Checkbutton(run, text="Browser camera for Meet (no install)",
+                        variable=self.browser_var).grid(row=2, column=0, columnspan=3, sticky="w")
         self.vcam_var = tk.BooleanVar(value=s.vcam_enabled)
-        ttk.Checkbutton(run, text="Send to virtual camera", variable=self.vcam_var).grid(
-            row=2, column=0, columnspan=3, sticky="w")
+        ttk.Checkbutton(run, text="Virtual camera driver (needs admin)",
+                        variable=self.vcam_var).grid(row=3, column=0, columnspan=3, sticky="w")
         self.start_btn = ttk.Button(run, text="Start", command=self.toggle_run)
-        self.start_btn.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(4, 0))
+        self.start_btn.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(4, 0))
+        ttk.Button(run, text="Open output test page", command=self._open_test_page).grid(
+            row=5, column=0, columnspan=3, sticky="ew", pady=(2, 0))
 
         bg = ttk.LabelFrame(side, text="Background", padding=6)
         bg.pack(fill="x", pady=4)
@@ -132,6 +138,9 @@ class App:
         if cams and int(self.cam_var.get() or 0) not in cams:
             self.cam_var.set(str(cams[0]))
 
+    def _open_test_page(self) -> None:
+        webbrowser.open(f"http://127.0.0.1:{self.settings.browser_port}/")
+
     def _pick_color(self) -> None:
         r, g, b = self.settings.glow_color
         rgb, _ = colorchooser.askcolor(color=f"#{r:02x}{g:02x}{b:02x}", title="Glow colour")
@@ -156,6 +165,7 @@ class App:
             return
         self.settings.width, self.settings.height = w, h
         self.settings.vcam_enabled = self.vcam_var.get()
+        self.settings.browser_enabled = self.browser_var.get()
         self.pipeline.start()
         self.start_btn.configure(text="Stop")
 
@@ -173,7 +183,7 @@ class App:
             self.start_btn.configure(text="Start")
         self.status.set(
             f"{st.message}  |  {st.fps:4.1f} fps  |  effect: {st.state}  |  "
-            f"virtual cam: {st.vcam}  |  background: {self.pipeline.status.background}  |  "
+            f"Meet: {st.browser}  |  virtual cam: {st.vcam}  |  background: {self.pipeline.status.background}  |  "
             f"snaps: {st.snap_count}")
         self.root.after(15, self._tick)
 

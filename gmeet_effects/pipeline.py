@@ -23,6 +23,7 @@ class Status:
     fps: float = 0.0
     state: str = State.VISIBLE.value
     vcam: str = "off"
+    browser: str = "off"
     background: str = "none"
     message: str = ""
     snap_count: int = 0
@@ -84,8 +85,18 @@ class Pipeline:
     # -------------------------------------------------------------------- loop
     def _run(self) -> None:
         s = self.settings
-        cam = vcam = hands = seg = None
+        cam = vcam = hands = seg = server = None
         try:
+            if s.browser_enabled:
+                from .stream_server import FrameServer
+
+                try:
+                    server = FrameServer(s.browser_port)
+                    server.start()
+                    self.status.browser = "waiting for Meet"
+                except OSError as exc:  # port already in use, ...
+                    server = None
+                    self.status.browser = f"error: {exc}"
             self.status.message = "Opening webcam..."
             cam = Camera(s.camera_index, s.width, s.height, s.fps)
             self.status.message = "Loading MediaPipe models..."
@@ -132,6 +143,14 @@ class Pipeline:
                 out = self.effect.render(frame, person, self.background.get(), t)
                 if vcam is not None:
                     vcam.send(out)
+                if server is not None:
+                    if server.active:
+                        ok, jpeg = cv2.imencode(".jpg", out, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                        if ok:
+                            server.publish(jpeg.tobytes())
+                        self.status.browser = "streaming to Meet"
+                    else:
+                        self.status.browser = "waiting for Meet"
 
                 preview = out.copy() if s.show_landmarks else out
                 if s.show_landmarks:
@@ -154,13 +173,15 @@ class Pipeline:
             self.status.message = f"Error: {exc}"
         finally:
             self.status.running = False
-            for obj, close in ((vcam, "close"), (hands, "close"), (seg, "close"), (cam, "release")):
+            for obj, close in ((server, "stop"), (vcam, "close"), (hands, "close"), (seg, "close"),
+                               (cam, "release")):
                 if obj is not None:
                     try:
                         getattr(obj, close)()
                     except Exception:
                         pass
             self.status.vcam = "off"
+            self.status.browser = "off"
             if not self.status.message.startswith("Error"):
                 self.status.message = "Stopped"
 

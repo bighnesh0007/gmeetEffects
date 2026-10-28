@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Snap Vanish Camera",
+  "version": "1.0.0",
+  "description": "Adds a 'Snap Vanish Camera' to Google Meet that shows the video from the local Snap Vanish app. Video only travels between this browser and 127.0.0.1.",
+  "minimum_chrome_version": "111",
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

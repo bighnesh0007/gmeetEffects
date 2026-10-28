@@ -27,7 +27,9 @@ class Settings:
     width: int = 1280
     height: int = 720
     fps: int = 30
-    vcam_enabled: bool = True
+    browser_enabled: bool = True  # serve frames to the browser extension (no install needed)
+    browser_port: int = 8765
+    vcam_enabled: bool = False  # optional virtual-camera driver output (needs admin to install)
     vcam_backend: str = "unitycapture"  # "unitycapture", "obs", or "auto"
     vcam_device: str = ""  # empty = backend default ("Unity Video Capture")
     mirror_preview: bool = True

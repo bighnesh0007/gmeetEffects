@@ -1,0 +1,27 @@
+SNAP VANISH - QUICK START (no admin rights, nothing to install)
+================================================================
+
+1. Run the app
+   Double-click SnapVanish.exe in this folder.
+   If Windows SmartScreen warns you: click "More info" -> "Run anyway".
+
+2. Add the Meet camera to Chrome or Edge (one time only)
+   - Chrome: open chrome://extensions    Edge: open edge://extensions
+   - Turn on "Developer mode" (top right in Chrome, left side in Edge)
+   - Click "Load unpacked" and select the "browser_extension" folder
+     that sits next to SnapVanish.exe.
+   - Keep that folder where it is; the browser loads it from there.
+
+3. Start the effect
+   - In Snap Vanish, choose your webcam and press Start.
+   - Press "Capture clean background (3 s)" and step out of the frame.
+
+4. Join Google Meet
+   - Open meet.google.com (reload the tab if it was already open).
+   - Settings -> Video -> Camera -> "Snap Vanish Camera".
+   - Snap your fingers to vanish, snap again to reappear
+     (or press Space / "Trigger now" in the app).
+
+Keep Snap Vanish running during the call. It owns your real webcam and
+Meet gets the processed video from it. All video stays on this computer;
+the app only listens on 127.0.0.1.

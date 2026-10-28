@@ -4,10 +4,12 @@ Snap Vanish is a standalone Windows app. Snap your fingers on camera and you
 break up into glowing dust that blows away, leaving the background behind you
 visible. Snap again and the particles fly back in and you reappear.
 
-The app shows up as a regular webcam, so Google Meet (or Zoom, Teams, and so
-on) picks it up like any other camera, and everyone in the call sees the
-effect. OBS is not needed, and nothing leaves your computer: all of the vision
-models run locally.
+The app works **without administrator rights and without installing anything**.
+It ships as a portable folder (unzip and run), and Google Meet receives the
+video through a small browser extension. Extensions can be loaded without
+admin rights. OBS and virtual-camera drivers are not needed, and nothing
+leaves your computer: all of the vision models run locally, and the app only
+listens on `127.0.0.1`.
 
 ```
 Webcam ─► OpenCV capture ─► MediaPipe Hands ──► snap detector ─┐
@@ -15,63 +17,40 @@ Webcam ─► OpenCV capture ─► MediaPipe Hands ──► snap detector ─�
                                                                ▼
            clean background plate ─► disintegration effect (NumPy particles)
                                                                │
-                         Tk preview ◄──────────────────────────┤
+               Tk preview ◄────────────────────────────────────┤
                                                                ▼
-                     pyvirtualcam ─► Unity Capture driver ─► Google Meet
+   local frame server (127.0.0.1:8765) ─► browser extension ─► "Snap Vanish Camera" in Meet
 ```
 
-## Requirements
+## Getting the app (no installs)
 
-* Windows 10 or 11, 64-bit
-* Python 3.10 – 3.12 (64-bit). MediaPipe 0.10.21 has no wheels for 3.13.
-* The **Unity Capture** virtual camera driver
+1. On GitHub, open this repository's **Actions** tab, then **Build portable Windows app**.
+2. Open the latest green run and download the **SnapVanish-windows** artifact (a zip).
+   Tagged releases (`v*`) also attach the zip under **Releases**.
+3. Unzip it anywhere you can write to, for example `Documents\SnapVanish`.
+   It includes Python, OpenCV, MediaPipe and everything else, so nothing gets
+   installed on your system.
 
-## Setup
+Then follow `QUICKSTART.txt` in that folder:
 
-1. **Install the Unity Capture driver.** Download
-   <https://github.com/schellingb/UnityCapture> (Code → Download ZIP), extract
-   it, open the `Install` folder and run `Install.bat` **as administrator**.
-   This registers a DirectShow camera named **"Unity Video Capture"**.
-   (To remove it later, run `Uninstall.bat`.)
-2. **Install the Python dependencies:**
+1. **Run `SnapVanish.exe`.** If SmartScreen warns you, click *More info* → *Run anyway*.
+2. **Load the extension once.** Open `chrome://extensions` (or `edge://extensions`),
+   turn on **Developer mode**, click **Load unpacked** and pick the
+   `browser_extension` folder.
+3. In Snap Vanish, choose your webcam and press **Start**. Then press
+   **Capture clean background (3 s)** and step out of the frame. The app
+   saves the background, so you only redo this if the room or the camera
+   position changes.
+4. In Google Meet (reload the tab if it was open), go to **Settings → Video → Camera**
+   and choose **Snap Vanish Camera**.
+5. Snap to vanish, and snap again to reappear. **Space** or the **Trigger now**
+   button does the same thing.
 
-   ```bash
-   py -3.12 -m venv .venv
-   ```
+**Open output test page** in the app shows exactly what Meet receives.
 
-   ```bash
-   .venv\Scripts\activate
-   ```
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the app:**
-
-   ```bash
-   python main.py
-   ```
-
-   Or just double-click `run.bat`, which creates the venv on first run.
-
-## Using it in Google Meet
-
-1. In Snap Vanish, pick your webcam (use **Scan** if you have several cameras)
-   and press **Start**. The status bar should show `virtual cam: Unity Video Capture`.
-2. Press **Capture clean background (3 s)**, then step out of the frame
-   before the countdown ends. The app records a clean background (the median
-   of 20 frames) and saves it, so you only have to do this again if the room
-   or the camera position changes.
-3. In Google Meet, go to **Settings → Video → Camera** and choose
-   **Unity Video Capture**. Do this after pressing Start. If Meet was already
-   open, refresh the tab.
-4. Snap your fingers to vanish, and snap again to reappear. **Space** or the
-   **Trigger now** button does the same thing.
-
-> Start Snap Vanish *before* selecting the camera in Meet. Your physical webcam
-> can only be opened by one program at a time, so Meet must use the virtual
-> camera and never the real one.
+> Snap Vanish uses your real webcam, so Meet must use **Snap Vanish Camera**
+> and never the physical camera. When no camera is specifically chosen, the
+> extension makes Snap Vanish the default.
 
 ### Snapping tips
 
@@ -93,6 +72,8 @@ Webcam ─► OpenCV capture ─► MediaPipe Hands ──► snap detector ─�
 | Wind | Direction the dust blows. The downwind side dissolves first. |
 | Adapt to lighting changes | Keeps refreshing the background plate from visible background pixels |
 | Mirror preview | Mirrors only the local preview. Meet receives the true (unmirrored) image. |
+| Browser camera for Meet | Serves frames to the extension (default, no install) |
+| Virtual camera driver | Optional. Sends frames to Unity Capture instead, for desktop apps like Zoom or Teams. The driver needs admin to install. |
 
 Settings are saved to `%USERPROFILE%\.gmeet_effects\settings.json`, and the
 background plate to `background.png` in the same folder.
@@ -123,28 +104,45 @@ background plate to `background.png` in the same folder.
   particles are vectorised NumPy plus OpenCV blending. That comes to about
   20 ms per 720p frame on top of the MediaPipe inference. If your PC
   struggles, choose 960x540.
-
-## Building a standalone .exe
-
-```bash
-build_exe.bat
-```
-
-This produces `dist\SnapVanish\SnapVanish.exe`, which runs without Python
-installed. The Unity Capture driver still has to be installed separately on
-each machine.
+* **Delivery to Meet** (`stream_server.py`, `browser_extension/`): the app
+  JPEG-encodes each frame only while the extension is fetching. The
+  extension's service worker long-polls `127.0.0.1:8765`, and a script on
+  meet.google.com draws the frames onto a canvas and returns its
+  `captureStream()` as the camera. Your microphone is passed through
+  untouched.
 
 ## Troubleshooting
 
-* **`virtual cam: error ...`**: the Unity Capture driver isn't installed, or
-  `Install.bat` wasn't run as administrator. Turning off **Send to virtual
-  camera** lets you still use the preview.
-* **Meet shows "Unity Video Capture" with a "please start sending" image**:
-  press Start in Snap Vanish, then reselect the camera in Meet.
-* **"Could not open webcam"**: another app (or Meet itself) is using the real
-  camera. Close it, or pick a different index.
+* **Meet doesn't list "Snap Vanish Camera"**: check that the extension is enabled
+  on `chrome://extensions`, then reload the Meet tab.
+* **Meet shows "Waiting for the Snap Vanish app"**: press Start in the app.
+  The status bar should change to `Meet: streaming to Meet`.
+* **"Developer mode" is greyed out**: your organisation has blocked unpacked
+  extensions by policy. Use the virtual-camera option on a machine where you
+  have admin rights, or ask IT to allow the extension.
+* **"Could not open webcam"**: another app is using the real camera. Close it
+  (or set Meet to Snap Vanish Camera), or pick a different index and press **Scan**.
+* **`Meet: error ... address already in use`**: another copy of Snap Vanish is
+  already running.
 * **Ghosting where you were standing**: capture the background again under the
   current lighting.
+* **Slow on an older laptop**: choose 960x540.
+
+## Running from source / building yourself (optional)
+
+If you can run Python (the per-user installer from python.org doesn't need
+admin), you can run from source instead. All packages install into your user
+folder or a venv:
+
+```bash
+pip install --user -r requirements.txt
+```
+
+```bash
+python main.py
+```
+
+`build_exe.bat` builds the same portable folder locally.
 
 ## Development
 
@@ -156,5 +154,5 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-The tests cover snap detection, the effect state machine and compositing, and
-the particle system. They don't need a webcam or MediaPipe.
+The tests cover snap detection, the effect state machine and compositing, the
+particle system, and the local frame server. They don't need a webcam or MediaPipe.
