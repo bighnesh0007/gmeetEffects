@@ -1,0 +1,7 @@
+# Python 3.10 - 3.12 (64-bit) on Windows 10/11
+opencv-python>=4.8
+numpy>=1.24,<3
+# 0.10.21 is the last release that ships the "solutions" API (Hands, SelfieSegmentation)
+mediapipe==0.10.21
+pyvirtualcam>=0.11
+Pillow>=10.0
